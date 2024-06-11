@@ -1,0 +1,124 @@
+import React from 'eact';
+import { BrowserRouter, Route, Switch } from 'eact-router-dom';
+import { Provider } from 'eact-redux';
+import store from './store';
+import Home from './Home';
+import PinDetail from './PinDetail';
+import Profile from './Profile';
+import Board from './Board';
+
+function App() {
+  return (
+    <Provider store={store}>
+      <BrowserRouter>
+        <Switch>
+          <Route exact path="/" component={Home} />
+          <Route path="/pin/:id" component={PinDetail} />
+          <Route path="/profile/:username" component={Profile} />
+          <Route path="/board/:id" component={Board} />
+        </Switch>
+      </BrowserRouter>
+    </Provider>
+  );
+}
+
+export default App;
+
+import React from 'eact';
+import { Link } from 'eact-router-dom';
+import { useDispatch } from 'eact-redux';
+import { likePin, savePin } from '../actions/pinActions';
+
+const Pin = ({ pin }) => {
+  const dispatch = useDispatch();
+
+  const handleLike = () => {
+    dispatch(likePin(pin.id));
+  };
+
+  const handleSave = () => {
+    dispatch(savePin(pin.id));
+  };
+
+  return (
+    <div className="pin">
+      <img src={pin.image} alt={pin.description} />
+      <div className="pin-info">
+        <h2>{pin.title}</h2>
+        <p>{pin.description}</p>
+        <button onClick={handleLike}>Like</button>
+        <button onClick={handleSave}>Save</button>
+      </div>
+    </div>
+  );
+};
+
+export default Pin;
+
+
+
+const express = require('express');
+const app = express();
+const mongoose = require('mongoose');
+const passport = require('passport');
+const session = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(session);
+
+mongoose.connect('mongodb://localhost/pinterest-clone', { useNewUrlParser: true, useUnifiedTopology: true });
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(session({
+  secret: 'ecret',
+  resave: false,
+  saveUninitialized: true,
+  store: new MongoDBStore({
+    uri: 'ongodb://localhost/pinterest-clone',
+    collection: 'essions'
+  })
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.get('/', (req, res) => {
+  res.send('Welcome to Pinterest Clone!');
+});
+
+app.post('/api/pins', (req, res) => {
+  const pin = new Pin(req.body);
+  pin.save((err, pin) => {
+    if (err) {
+      res.status(500).send(err);
+    } else {
+      res.send(pin);
+    }
+  });
+});
+
+app.get('/api/pins', (req, res) => {
+  Pin.find().then(pins => {
+    res.send(pins);
+  }).catch(err => {
+    res.status(500).send(err);
+  });
+});
+
+app.listen(3000, () => {
+  console.log('Server started on port 3000');
+});
+
+
+
+const mongoose = require('mongoose');
+
+const pinSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  image: String,
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  saves: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+});
+
+const Pin = mongoose.model('Pin', pinSchema);
+
+module.exports = Pin;
